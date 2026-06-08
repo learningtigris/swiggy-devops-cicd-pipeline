@@ -53,3 +53,11 @@ screenshots/
 - Security Scanning
 - Containerization
 - AWS Cloud Administration
+
+## Screenshots
+
+### Jenkins Pipeline
+![Jenkins](screenshots/jenkins-pipeline.png)
+
+### Final Deployment
+![Application](screenshots/final-application.png)
