@@ -1,21 +1,18 @@
-resource "aws_security_group" "Project-SG" {
+resource "aws_security_group" "project_sg" {
   name        = "Project-SG"
-  description = "Open 22,443,80,8080,9000"
+  description = "Allow SSH, HTTP, HTTPS, Jenkins, SonarQube and Application Ports"
 
-  # Define a single ingress rule to allow traffic on all specified ports
-  ingress = [
-    for port in [22, 80, 443, 8080, 9000, 3000] : {
-      description      = "TLS from VPC"
-      from_port        = port
-      to_port          = port
-      protocol         = "tcp"
-      cidr_blocks      = ["0.0.0.0/0"]
-      ipv6_cidr_blocks = []
-      prefix_list_ids  = []
-      security_groups  = []
-      self             = false
+  dynamic "ingress" {
+    for_each = [22, 80, 443, 8080, 9000, 3000]
+
+    content {
+      description = "TCP Port ${ingress.value}"
+      from_port   = ingress.value
+      to_port     = ingress.value
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
     }
-  ]
+  }
 
   egress {
     from_port   = 0
@@ -29,18 +26,40 @@ resource "aws_security_group" "Project-SG" {
   }
 }
 
-
 resource "aws_instance" "web" {
   ami                    = "ami-0ecb62995f68bb549"
-  instance_type          = "m7i-flex.large"
+  instance_type          = "t3.large"
   key_name               = "cherry"
-  vpc_security_group_ids = [aws_security_group.Project-SG.id]
-  user_data              = templatefile("./resource.sh", {})
 
-  tags = {
-    Name = "Swiggy_project"
-  }
+  vpc_security_group_ids = [
+    aws_security_group.project_sg.id
+  ]
+
+  user_data = file("${path.module}/resource.sh")
+
   root_block_device {
     volume_size = 30
+    volume_type = "gp3"
   }
+
+  tags = {
+    Name = "Swiggy-DevOps-Project"
+  }
+}
+
+output "instance_public_ip" {
+  description = "Public IP of EC2 Instance"
+  value       = aws_instance.web.public_ip
+}
+
+output "jenkins_url" {
+  value = "http://${aws_instance.web.public_ip}:8080"
+}
+
+output "sonarqube_url" {
+  value = "http://${aws_instance.web.public_ip}:9000"
+}
+
+output "application_url" {
+  value = "http://${aws_instance.web.public_ip}:3000"
 }
